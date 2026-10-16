@@ -1,18 +1,23 @@
 import { createOfficeClock } from './office-clock.js';
+import { createOfficeActivity, sampleActivity } from './office-activity.js?v=seated-2';
 
 // Coordinates are authored against the approved 2048 × 683 composition.
 // Only these feathered areas move. The camera, architecture and lettering stay still.
-// Only fingertips and isolated leaf clusters move. Faces, torsos, chairs,
-// monitors and desk edges are deliberately excluded from every motion mask.
+// Hands are independently timed; shoulders, torso and chair remain fixed.
 const regions=[
  // x, y, rx, ry, horizontal px, vertical px, radians, speed, phase
- [617,270,13,7,0,.85,0,8.1,.1], [640,264,8,7,0,.72,0,9.2,1.8],
- [1418,267,9,7,0,.72,0,7.7,2.0], [1441,273,13,7,0,.9,0,8.5,4.1],
- [609,483,15,8,0,.95,0,8.8,3.2], [646,474,8,8,0,.75,0,7.9,.5],
- [1438,477,8,8,0,.8,0,8.3,5.0], [1467,487,14,8,0,.9,0,7.5,2.4],
- [170,229,40,53,.6,.15,.003,.55,.6], [294,170,28,38,.55,.1,.004,.66,3.4],
- [873,166,46,65,.6,.15,.003,.48,1.8], [1184,184,29,56,.5,.1,.003,.60,4.0],
- [1719,189,26,40,.6,.1,.004,.51,2.7], [1963,219,35,49,.55,.15,.003,.58,5.1]
+ [617,270,17,11,.45,3.6,0,11.1,.1], [640,264,11,10,.3,3.0,0,12.2,1.8],
+ [1418,267,12,10,.3,3.0,0,10.7,2.0], [1441,273,17,11,.5,3.8,0,11.5,4.1],
+ [609,483,19,12,.6,4.2,0,11.8,3.2], [646,474,11,11,.4,3.5,0,10.9,.5],
+ [1438,477,11,11,.4,3.7,0,11.3,5.0], [1467,487,18,12,.6,4.1,0,10.5,2.4],
+ // Sparse surviving plants; cleared columns are never warped.
+ [356,218,32,50,.9,.2,.004,.55,.6], [1668,204,33,52,.9,.2,.004,.48,1.8],
+ [395,448,49,55,.8,.2,.003,.51,2.7], [1657,451,50,57,.8,.2,.003,.58,5.1],
+ // The soft tips of the gills flex gently without moving a head.
+ [550,201,24,29,0,1.4,.008,.9,.4], [661,191,16,24,0,1.2,.008,.83,1.2],
+ [1402,200,15,27,0,1.3,.008,.93,2.1], [1507,215,20,26,0,1.4,.008,.88,4.2],
+ [548,397,24,38,0,1.7,.009,.84,3.1], [671,380,13,26,0,1.5,.008,.91,1.4],
+ [1422,389,15,31,0,1.4,.008,.87,2.6], [1537,408,22,35,0,1.8,.009,.95,4.5]
 ];
 const vertex=`attribute vec2 a_position;varying vec2 v_uv;
 void main(){v_uv=vec2(a_position.x*.5+.5,.5-a_position.y*.5);gl_Position=vec4(a_position,0.,1.);}`;
@@ -44,7 +49,7 @@ void main(){
  light+=(.5+.5*sin(u_time*.80+4.))*area(p,vec2(624.,492.),vec2(47.,17.));
  light+=(.5+.5*sin(u_time*.57+1.))*area(p,vec2(1452.,496.),vec2(48.,17.));
  color+=vec3(.014,.032,.06)*light*mix(.15,1.,u_night)*fade;
- float mist=steam(p,vec2(747.,254.),0.)+steam(p,vec2(573.,483.),2.)+steam(p,vec2(1502.,490.),4.);
+ float mist=steam(p,vec2(239.,267.),0.)+steam(p,vec2(1905.,292.),4.);
  color=mix(color,vec3(.86,.89,.94),mist*mix(.75,1.35,u_night)*fade);
  gl_FragColor=vec4(color,1.);
 }`;
@@ -52,6 +57,7 @@ void main(){
 /** Native, local-only 2.5D scene. Failure always reveals the matching PNG underneath. */
 export function createOfficeScene(canvas, images, onStatus=()=>{}){
  const win=canvas.ownerDocument.defaultView,doc=canvas.ownerDocument;
+ const activity=createOfficeActivity(canvas,images);
  let gl=null,program=null,buffer=null,uniforms=null,textures={},shaders=[],validated=false;
  let active=false,paused=false,intersecting=true,pageActive=true,disposed=false,lost=false,failed=false,theme='light',status='';
  const values=new Float32Array(regions.length*4),layout=new Float32Array(regions.flatMap(r=>r.slice(0,4)));
@@ -64,7 +70,7 @@ export function createOfficeScene(canvas, images, onStatus=()=>{}){
   if(moving()){clock.start();emit('running');}
   else {clock.stop();emit(failed?'unavailable':lost||!textures[theme]?'loading':paused?'paused':'inactive');}
  }
- function fail(){failed=true;clock.stop();canvas.dataset.ready='false';emit('unavailable');}
+ function fail(){failed=true;clock.stop();canvas.dataset.ready='false';activity.hide();emit('unavailable');}
  function compile(type,source){
   const shader=gl.createShader(type);shaders.push(shader);gl.shaderSource(shader,source);gl.compileShader(shader);
   if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw new Error('Office shader unavailable');
@@ -97,12 +103,14 @@ export function createOfficeScene(canvas, images, onStatus=()=>{}){
   if(!available())return;
   try{
    const fade=Math.min(1,time);
+   const states=Array.from({length:4},(_,i)=>sampleActivity(time,i));
    regions.forEach((r,i)=>{
     const phase=time*r[7]+r[8],angle=r[6]*Math.sin(phase*.79)*fade;
     values[i*4]=r[4]*Math.sin(phase*.71)*fade;
     // Typing has brief independent rests, with no whole-body bobbing.
     const typing=i<8;
-    const working=!typing||Math.sin(time*.48+Math.floor(i/2)*1.7)>-.74;
+    const working=!typing||((!activity.ready(theme)||states[Math.floor(i/2)].kind==='typing')&&Math.sin(time*.63+Math.floor(i/2)*1.7)>-.8);
+    if(typing&&!working)values[i*4]=0;
     values[i*4+1]=working?r[5]*(typing?Math.max(0,Math.sin(phase)):Math.sin(phase))*fade:0;
     values[i*4+2]=Math.sin(angle);values[i*4+3]=Math.cos(angle)-1;
    });
@@ -111,6 +119,7 @@ export function createOfficeScene(canvas, images, onStatus=()=>{}){
    gl.drawArrays(gl.TRIANGLES,0,6);
    if(!validated){if(gl.getError()!==gl.NO_ERROR)throw new Error('Office frame unavailable');validated=true;}
    canvas.dataset.ready='true';
+   activity.draw(time,theme,states);
   }catch{fail();}
  }
  function resize(){
@@ -123,7 +132,7 @@ export function createOfficeScene(canvas, images, onStatus=()=>{}){
   if(canvas.width!==width){canvas.width=width;canvas.height=width/3;gl.viewport(0,0,width,width/3);}
   render(clock.time);
  }
- function contextLost(event){event.preventDefault();lost=true;clock.stop();canvas.dataset.ready='false';sync();}
+ function contextLost(event){event.preventDefault();lost=true;clock.stop();canvas.dataset.ready='false';activity.hide();sync();}
  function contextRestored(){
   if(disposed)return;
   try{lost=false;failed=false;textures={};initialize();for(const key of ['light','dark'])loadImage(key);resize();sync();}catch{fail();}
@@ -154,9 +163,9 @@ export function createOfficeScene(canvas, images, onStatus=()=>{}){
  return {
   setActive(value){active=value;sync();},
   setPaused(value){paused=value;sync();},
-  setTheme(value){theme=value==='dark'?'dark':'light';canvas.dataset.ready='false';render(clock.time);sync();},
+  setTheme(value){theme=value==='dark'?'dark':'light';canvas.dataset.ready='false';activity.hide();render(clock.time);sync();},
   destroy(){
-   if(disposed)return;disposed=true;clock.destroy();resizeObserver?.disconnect();intersectionObserver?.disconnect();
+   if(disposed)return;disposed=true;clock.destroy();activity.destroy();resizeObserver?.disconnect();intersectionObserver?.disconnect();
    for(const key of ['light','dark']){
     images[key]?.removeEventListener('load',loaded[key]);
     images[key]?.removeEventListener('error',imageFailed);

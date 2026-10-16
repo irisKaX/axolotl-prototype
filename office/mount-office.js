@@ -1,4 +1,4 @@
-import { createOfficeScene } from './office-scene.js';
+import { createOfficeScene } from './office-scene.js?v=seated-2';
 
 const host = document.querySelector('.office-scene');
 const home = document.querySelector('#home-view');

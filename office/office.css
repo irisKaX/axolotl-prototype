@@ -33,3 +33,6 @@
 @media (prefers-reduced-motion: reduce) {
   #app .office-motion-toggle { transition: none; }
 }
+
+#app .office-activity-canvas { display:block; opacity:0; pointer-events:none; }
+#app .office-activity-canvas[data-ready="true"] { opacity:1; }
