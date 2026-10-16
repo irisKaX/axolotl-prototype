@@ -1,0 +1,35 @@
+/* The extracted office keeps the prototype's header and theme controls. */
+#app .neutral-hero {
+  height: calc(100vw / 3);
+  min-height: 0;
+  max-height: 62svh;
+  flex: none;
+  background: transparent;
+}
+:root[data-office-depth="soft"] #app .neutral-hero { --office-fade: 48px; }
+#app .neutral-hero-image { object-position: center; }
+#app .office-scene-canvas { display: block; opacity: 0; }
+#app .office-scene-canvas[data-ready="true"] { opacity: 1; }
+#app .office-motion-toggle {
+  display: grid;
+  z-index: 3;
+  right: 20px;
+  bottom: 28px;
+  border: 1px solid #ffffff40;
+  background: #131a27bb;
+  color: #fff;
+  box-shadow: 0 3px 14px #0002;
+  backdrop-filter: blur(10px);
+  opacity: .7;
+  transition: opacity 150ms ease;
+}
+#app .office-motion-toggle:hover, #app .office-motion-toggle:focus-visible { opacity: 1; }
+#app .office-motion-toggle:focus-visible { outline: 3px solid #89b4ff; outline-offset: 3px; }
+:root[data-theme="light"] #app .office-motion-toggle { background: #ffffffe6; color: #192034; border-color: #19203430; }
+@media (max-width: 760px) {
+  #app .neutral-hero { height: 220px; max-height: none; }
+  #app .office-motion-toggle { right: 14px; width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #app .office-motion-toggle { transition: none; }
+}
