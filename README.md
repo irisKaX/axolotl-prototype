@@ -1,3 +1,11 @@
+# Archivní designový zdroj Axolotl
+
+Aktivní preview bylo v této pracovní větvi vyřazeno. Jediný katalog: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/#design-system
+
+Vstupní HTML přesměrovává do Library V1.1. Zdroje, historie a podklady zůstávají zachované; nejde o smazání repozitáře. Přesměrování se projeví veřejně až po výslovně schváleném merge a nasazení. Produkční aplikace se nemění.
+
+## Historická dokumentace
+
 # Axolotl prototype
 
 [Open the prototype](https://iriskax.github.io/axolotl-prototype/)
